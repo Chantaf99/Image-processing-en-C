@@ -5,6 +5,7 @@
 
 int main(void){
 
-printf("hello");
+printf("hello\n");
+printf("mamak\n");
 return 0;
 }
