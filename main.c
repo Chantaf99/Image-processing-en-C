@@ -4,9 +4,7 @@
 #include <stdio.h>
 
 int main(void){
-
-printf("hello\n");
-printf("mamak\n");
+printf("hello ");
+printf("world\n");
 return 0;
 }
-printf("Charafzml");
