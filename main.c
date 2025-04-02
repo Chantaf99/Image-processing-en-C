@@ -8,3 +8,11 @@ printf("hello ");
 printf("world\n");
 return 0;
 }
+
+
+t_bmp8 * bmp8_loadImage(const char * filename) {
+
+
+
+
+}
