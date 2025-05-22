@@ -5,15 +5,25 @@
 #include "bmp8.h"
 
 int main(void){
-printf("hello ");
-printf("world\n");
-return 0;
-}
+    const char *input_filename  = "barbara_gray (1).bmp";
+    const char *file_de_sortie = "barbara_gray_sauvegarde.bmp";
+    
+    // Chargement de l'image
+    t_bmp8 *img = bmp8_loadImage(input_filename);
+    if (!img) {
+        perror("Échec du chargement de l'image\n");
+        return 1;
+    }
 
+    // Affichage des informations
+    bmp8_printInfo(img);
 
-t_bmp8 * bmp8_loadImage(const char * filename) {
+    // Sauvegarde de l'image
+    bmp8_saveImage(file_de_sortie, img);
 
+    // Libération de la mémoire
+    bmp8_free(img);
 
-
-
+    printf("Programme terminé avec succès.\n");
+    return 0;
 }
