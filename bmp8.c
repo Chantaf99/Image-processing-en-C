@@ -167,9 +167,73 @@ void apply_and_save(const char *srcFilename,
     // 2. Sauvegarder le résultat
     bmp8_saveImage(outFilename, img);
 free(img);
-
-}
 }
 
+}
 
 
+unsigned int * bmp8_computeHistogram(t_bmp8 * img) {
+
+  //Calcul l'histogramme d'une image de 8 bits en niveaux de gris
+
+  if (img == NULL || img->data == NULL){
+    return NULL;
+    }
+//On alloue un tableau pour représenter l'historigramme
+  unsigned int *hist = (unsigned int *)calloc(256, sizeof(unsigned int));
+
+  if (hist == NULL){
+    printf("Erreur. Allocation mémoire histogramme.\n");
+    return NULL;
+	}
+//Chaque case représente le nmbre de pixels d'un niveau de gris donné (de 0 à 255)
+  //pour chaque pixel, on incrémente la case correspondante de niveau de gris dans le tableau
+  for (unsigned int i = 0; i < img->dataSize; i++) {
+    hist[img->data[i]]++;
+	}
+
+  return hist;
+}
+
+unsigned int * bmp8_computeCDF(unsigned int * hist)
+{
+//Calculer l’histogramme cumulé au moyen d’une CDF (fonction de repartition cumulé) et normalisation
+
+	if(hist==NULL){return NULL;}
+	unsigned int *cdf = (unsigned int *)calloc(256, sizeof(unsigned int));
+	if (cdf == NULL){
+  		printf("Erreur d'allocation de cdf");
+  		return NULL;
+	}
+    //Calcul du CDF
+    cdf[0] = hist[0];
+    for (unsigned int i = 0; i < 256; i++) {
+        cdf[i] = cdf[i-1] + hist[i];
+    }
+
+	//Calcul de la premiere valeur non nulle
+    unsigned int cdfmin = 0;
+    for (int i = 0; i < 256; i++) {
+        if (cdf[i] != 0) {
+            cdfmin = cdf[i];
+            break;
+        }
+    }
+
+    // Normalisation
+    unsigned int *hist_eq = (unsigned int *)calloc(256, sizeof(unsigned int));
+    if (hist_eq == NULL) {
+        printf("Erreur d'allocation de l'histogramme égalisé.\n");
+        free(cdf);
+        return NULL;
+    }
+
+    unsigned int totalPixels = cdf[255];
+
+    for (int i = 0; i < 256; i++) {
+        hist_eq[i] = round(((double)(cdf[i] - cdfmin) / (totalPixels - cdfmin)) * 255);
+    }
+
+    free(cdf);
+    return hist_eq;
+}
