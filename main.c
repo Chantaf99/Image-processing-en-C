@@ -1,4 +1,4 @@
-
+//main.c
 #include <stdio.h>
 #include "bmp8.h"
 
