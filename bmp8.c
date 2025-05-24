@@ -2,6 +2,7 @@
 #include "bmp8.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h> 
 
 t_bmp8 *bmp8_loadImage(const char *filename) {
     FILE *file = fopen(filename, "rb");
@@ -109,29 +110,65 @@ void bmp8_threshold(t_bmp8 *img, int threshold) {
 }
 
 void bmp8_applyFilter(t_bmp8 *img, float **kernel, int kernelSize) {
-    unsigned char *newData = (unsigned char *)malloc(img->dataSize);
+    int w = img->width;
+    int h = img->height;
+    int half = kernelSize / 2;
+
+    // 1) Allouer un nouveau buffer pour les pixels
+    unsigned char *newData = malloc(img->dataSize);
     if (!newData) {
-        perror("Erreur d'allocation de memoire pour le filtre\n");
+        perror("Erreur d'allocation de mémoire pour le filtre");
         return;
     }
-    int halfKernel = kernelSize / 2;
-    for (unsigned int y = 0; y < img->height; y++) {
-        for (unsigned int x = 0; x < img->width; x++) {
-            float sum = 0.0f;
-            for (int ky = -halfKernel; ky <= halfKernel; ky++) {
-                for (int kx = -halfKernel; kx <= halfKernel; kx++) {
-                    int pixelX = x + kx;
-                    int pixelY = y + ky;
-                    if (pixelX >= 0 && pixelX < img->width && pixelY >= 0 && pixelY < img->height) {
-                        sum += img->data[pixelY * img->width + pixelX] * kernel[ky + halfKernel][kx + halfKernel];
-                    }
+
+    // 2) Copier les bords tels quels (on n'y applique pas le filtre)
+    memcpy(newData, img->data, img->dataSize);
+
+    // 3) Parcourir uniquement l'intérieur de l'image
+    for (int y = half; y < h - half; y++) {
+        for (int x = half; x < w - half; x++) {
+            float acc = 0.0f;
+
+            // 4) Convoluer le noyau centré sur (x,y)
+            for (int ky = -half; ky <= half; ky++) {
+                for (int kx = -half; kx <= half; kx++) {
+                    int ix = x + kx;
+                    int iy = y + ky;
+                    float coef = kernel[ky + half][kx + half];
+                    acc += img->data[iy * w + ix] * coef;
                 }
             }
-            newData[y * img->width + x] = (unsigned char)sum;
+
+            // 5) Clamper la somme entre 0 et 255
+            if      (acc < 0.0f)   acc = 0.0f;
+            else if (acc > 255.0f) acc = 255.0f;
+
+            // 6) Stocker le résultat
+            newData[y * w + x] = (unsigned char)(acc + 0.5f);
         }
     }
+
+    // 7) Remplacer l'ancien buffer par le nouveau
     free(img->data);
     img->data = newData;
+}
+void apply_and_save(const char *srcFilename,
+                    const char *outFilename,
+                    float **kernel,
+                    int kernelSize)
+{
+    t_bmp8 *img = bmp8_loadImage(srcFilename);
+    if (!img) {
+        fprintf(stderr, "Erreur : impossible de charger '%s'\n", srcFilename);
+        return;
+    // 1. Appliquer le filtre
+    bmp8_applyFilter(img, kernel, kernelSize);
+
+    // 2. Sauvegarder le résultat
+    bmp8_saveImage(outFilename, img);
+free(img);
+
+}
 }
 
 
