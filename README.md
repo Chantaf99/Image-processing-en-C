@@ -16,7 +16,7 @@ Développer un programme en C capable de :
 ## Compilation
 
 -Avec Clion
--Avec GCC : gcc main.c bmp8.c bmp24.c -o main.exe
+-Avec GCC : gcc main.c bmp8.c bmp24.c kernels.c filtres_convolution.c -o main.exe
 
 ## Fonctionnalités
 
@@ -24,7 +24,7 @@ Chargement/Sauvegarde d’images BMP (8 bits et 24 bits)
 
 -Opérations : négatif, luminosité, binarisation
 
--Application de filtres pour des images en niveaux de gris et en couleurs (flou, contours, netteté…)
+-Application de filtres avec le m pour des images en niveaux de gris et en couleurs (flou, contours, netteté…)
 
 -Calcul d’histogrammes et de CDF
 
