@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <math.h>
 #include "bmp8.h"
 #include "bmp24.h"
 #include "kernels.h"
@@ -159,31 +159,31 @@ int main(void) {
     } // while
 
     //Egalisation d'histogramme en gris
-    t_bmp8 *img = bmp8_loadImage("image_brightness.bmp");
-    if (!img || img->data == NULL) {
+    t_bmp8 *imgP38 = bmp8_loadImage("image_brightness.bmp");
+    if (!imgP38 || imgP38->data == NULL) {
         printf("Erreur chargement image\n");
         return 1;
     }
 
-    unsigned int *hist = bmp8_computeHistogram(img);
+    unsigned int *hist = bmp8_computeHistogram(imgP38);
     unsigned int *cdf = bmp8_computeCDF(hist);
-    bmp8_equalize(img, cdf);
+    bmp8_equalize(imgP38, cdf);
 
-    bmp8_saveImage("imagegris_equalized.bmp", img);
-    bmp8_free(img);
+    bmp8_saveImage("imagegris_equalized.bmp", imgP38);
+    bmp8_free(imgP38);
     free(hist);
     free(cdf);
     //Egalisation d'histogramme en couleur
-    t_bmp24 *img = bmp24_loadImage("flowers_color.bmp");
-    if (!img) {
+    t_bmp24 *imgP324 = bmp24_loadImage("flowers_color.bmp");
+    if (!imgP324) {
         printf("Erreur chargement image\n");
         return 1;
     }
 
-    bmp24_equalizeColor(img);
+    bmp24_equalizeColor(imgP324);
 
-    bmp24_saveImage(img, "flowers_equalized.bmp");
-    bmp24_free(img);
+    bmp24_saveImage(imgP324, "flowers_equalized.bmp");
+    bmp24_free(imgP324);
     printf("Image Flowers equalized bien chargee");
     return 0;
 }

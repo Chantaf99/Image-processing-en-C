@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 t_pixel **bmp24_allocateDataPixels(int width, int height) {
 
