@@ -36,7 +36,7 @@ void bmp8_equalize(t_bmp8 * img, unsigned int * hist_eq);
 
 
 
-#endif
+#endif 
 
 
 

@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h> 
+#include <math.h>
+
 
 t_bmp8 *bmp8_loadImage(const char *filename) {
     FILE *file = fopen(filename, "rb");
@@ -157,14 +159,15 @@ void apply_and_save(const char *srcFilename, const char *outFilename, float **ke
     t_bmp8 *img = bmp8_loadImage(srcFilename);
     
     if (!img) {
-        fprintf(stderr, "Erreur : impossible de charger '%s'\n", srcFilename);
+        printf("Erreur : impossible de charger '%s'\n", srcFilename);
         return;
-
+    }
     bmp8_applyFilter(img, kernel, kernelSize);
-
     bmp8_saveImage(outFilename, img);
-free(img);
-}
+    printf("Image traitée et sauvegardée dans '%s'\n", outFilename);
+    
+    free(img);
+
 
 }
 

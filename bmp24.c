@@ -222,40 +222,101 @@ void bmp24_grayscale(t_bmp24 *img) {
 void bmp24_brightness(t_bmp24 *img, int value) {
     for(int y = 0; y < img->height; y++) {
         for(int x = 0; x < img->width; x++) {
-            int r = img->data[y][x].red + value;
-            int g = img->data[y][x].green + value;
-            int b = img->data[y][x].blue + value;
+            int nr = img->data[y][x].red + value;
+            int ng = img->data[y][x].green + value;
+            int nb = img->data[y][x].blue + value;
             // Ajustement des valeurs entre 0 and 255
-            if (r > 255) r = 255;
-            if (r <   0) r = 0;
-            if (g > 255) g = 255;
-            if (g <   0) g = 0;
-            if (b > 255) b = 255;
-            if (b <   0) b = 0;
+            if (nr > 255) nr = 255;
+            if (nr <   0) nr = 0;
+            if (ng > 255) ng = 255;
+            if (ng <   0) ng = 0;
+            if (nb > 255) nb = 255;
+            if (nb <   0) nb = 0;
 
-            img->data[y][x].red   = (uint8_t) r;
-            img->data[y][x].green = (uint8_t) g;
-            img->data[y][x].blue  = (uint8_t) b;
+            img->data[y][x].red   = (uint8_t) nr;
+            img->data[y][x].green = (uint8_t) ng;
+            img->data[y][x].blue  = (uint8_t) nb;
         }
     }
 }
 
 t_pixel bmp24_convolution(t_bmp24 *img, int x, int y, float **kernel, int kernelSize) {
-    t_pixel p = {0, 0, 0};
-    return p;
+    int half = kernelSize / 2;
+    float r = 0.0f, g = 0.0f, b = 0.0f;
+
+    for (int ky = -half; ky <= half; ky++) {
+        for (int kx = -half; kx <= half; kx++) {
+            int ix = x + kx;
+            int iy = y + ky;
+
+            // Ignore les pixels hors limites
+            if (ix < 0 || ix >= img->width || iy < 0 || iy >= img->height)
+                continue;
+
+            float coef = kernel[ky + half][kx + half];
+            t_pixel px = img->data[iy][ix];
+
+            r += px.red   * coef;
+            g += px.green * coef;
+            b += px.blue  * coef;
+        }
+    }
+
+    // Clamping + arrondi
+    if (r < 0.0f) r = 0.0f; else if (r > 255.0f) r = 255.0f;
+    if (g < 0.0f) g = 0.0f; else if (g > 255.0f) g = 255.0f;
+    if (b < 0.0f) b = 0.0f; else if (b > 255.0f) b = 255.0f;
+
+    t_pixel result = {
+        .red   = (uint8_t)(r + 0.5f),
+        .green = (uint8_t)(g + 0.5f),
+        .blue  = (uint8_t)(b + 0.5f)
+    };
+
+    return result;
 }
 
-void bmp24_boxBlur(t_bmp24 *img) {
+void bmp24_applyFilter(t_bmp24 *img, float **kernel, int kernelSize) {
+    int w = img->width;
+    int h = img->height;
+
+    // Allouer un nouveau tableau de pixels
+    t_pixel **newData = malloc(h * sizeof(t_pixel *));
+    for (int y = 0; y < h; y++) {
+        newData[y] = malloc(w * sizeof(t_pixel));
+    }
+
+    // Appliquer la convolution à chaque pixel
+    for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {
+            newData[y][x] = bmp24_convolution(img, x, y, kernel, kernelSize);
+        }
+    }
+
+    // Libérer l'ancien tableau
+    for (int y = 0; y < h; y++) {
+        free(img->data[y]);
+    }
+    free(img->data);
+
+    // Remplacer par le nouveau
+    img->data = newData;
 }
 
-void bmp24_gaussianBlur(t_bmp24 *img) {
-}
+void apply_and_save_24(const char *srcFilename, const char *outFilename, float **kernel, int kernelSize) {
+    t_bmp24 *img = bmp24_loadImage(srcFilename);
 
-void bmp24_outline(t_bmp24 *img) {
-}
+    if (!img) {
+        printf("Erreur : impossible de charger l'image '%s'\n", srcFilename);
+        return;
+    }
 
-void bmp24_emboss(t_bmp24 *img) {
-}
+    bmp24_applyFilter(img, kernel, kernelSize);
+    bmp24_saveImage(img, outFilename);
 
-void bmp24_sharpen(t_bmp24 *img) {
-}
+    printf("Image traitee et sauvegardee dans '%s'\n", outFilename);
+    bmp24_free(img);
+    }
+
+
+
