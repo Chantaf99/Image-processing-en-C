@@ -89,12 +89,7 @@ int main(void){
     apply_and_save_24(src24, "flowers_color_outline24.bmp", outline, 3);
     apply_and_save_24(src24, "flowers_color_emboss24.bmp", emboss, 3);
 
-
-
-
-
-
-    */
+    
 
     //Egalisation d'histogramme en gris
     t_bmp8 *img = bmp8_loadImage("image_brightness.bmp");
