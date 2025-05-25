@@ -94,4 +94,9 @@ t_pixel  bmp24_convolution (t_bmp24 *img, int x, int y, float **kernel, int kern
 void bmp24_applyFilter(t_bmp24 *img, float **kernel, int kernelSize);
 void apply_and_save_24(const char *srcFilename, const char *outFilename, float **kernel, int kernelSize);
 
+//Egalisation d'histogramme en couleur
+void rgb_to_yuv(unsigned char R, unsigned char G, unsigned char B, double *Y, double *U, double *V);
+void yuv_to_rgb(double Y, double U, double V, unsigned char *R, unsigned char *G, unsigned char *B);
+void bmp24_equalizeColor(t_bmp24 *img);
+
 #endif // BMP24_H

@@ -4,8 +4,8 @@
 #include "bmp8.h"
 #include "kernels.h"
 #include "bmp24.h"
-int main(void){
-
+//int main(void){
+/*
 //  Partie 1 Appel de l'image BMP 8 bits
     t_bmp8 *img = bmp8_loadImage("barbara_gray (1).bmp");
     if (!img) {
@@ -15,7 +15,7 @@ int main(void){
 
 
 
-/*  Partie 1 Traitement d'images BMP 8 bits
+  //Partie 1 Traitement d'images BMP 8 bits
     t_bmp8 *img_negative8 = bmp8_loadImage("barbara_gray (1).bmp");
     bmp8_negative(img_negative8);
     bmp8_saveImage("image_negative8.bmp", img_negative8);
@@ -32,9 +32,9 @@ int main(void){
     bmp8_saveImage("image_threshold8.bmp", img_threshold8);
     bmp8_free(img_threshold8);
     bmp8_free(img);
-*/
+
     
-/* Partie 1 Traitement de filtres
+// Partie 1 Traitement de filtres
     const char *src = "barbara_gray (1).bmp";
     apply_and_save(src, "image_sharpen8.bmp", sharpen, 3);
     apply_and_save(src, "image_box_blur8.bmp", box_blur, 3);
@@ -45,9 +45,9 @@ int main(void){
     bmp8_free(img);
 
     printf("Programme termine avec succes.\n");
-*/ 
 
-    /* Partie 2 Traitement d'images BMP 24 bits
+
+    //Partie 2 Traitement d'images BMP 24 bits
 
     t_bmp24 *img24 = bmp24_loadImage("flowers_color.bmp");
     if (!img24) {
@@ -79,7 +79,7 @@ int main(void){
     bmp24_free(img24);
 
     printf("Traitement d'images BMP 24 bits termine avec succes.\n");
-*/
+
     //Traitement de filtres sur BMP 24 bits
 
     const char *src24 = "flowers_color.bmp";
@@ -106,6 +106,20 @@ int main(void){
     bmp8_free(img);
     free(hist);
     free(cdf);
+*/
+    //Egalisation d'histogramme en couleur
+int main(void){
+    t_bmp24 *img = bmp24_loadImage("flowers_color.bmp");
+    if (!img) {
+        printf("Erreur chargement image\n");
+        return 1;
+    }
+
+    bmp24_equalizeColor(img);
+
+    bmp24_saveImage(img, "flowers_equalized.bmp");
+    bmp24_free(img);
+    printf("Image Flowers equalized bien chargee");
 
     return 0;
 }
