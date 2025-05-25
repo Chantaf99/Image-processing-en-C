@@ -152,23 +152,21 @@ void bmp8_applyFilter(t_bmp8 *img, float **kernel, int kernelSize) {
     free(img->data);
     img->data = newData;
 }
-void apply_and_save(const char *srcFilename,
-                    const char *outFilename,
-                    float **kernel,
-                    int kernelSize)
-{
+void apply_and_save(const char *srcFilename, const char *outFilename, float **kernel, int kernelSize){
+    
     t_bmp8 *img = bmp8_loadImage(srcFilename);
+    
     if (!img) {
         fprintf(stderr, "Erreur : impossible de charger '%s'\n", srcFilename);
         return;
-    // 1. Appliquer le filtre
+
     bmp8_applyFilter(img, kernel, kernelSize);
 
-    // 2. Sauvegarder le résultat
     bmp8_saveImage(outFilename, img);
-free(img);
+    
+    printf("Image sauvegardee dans %s\n", outFilename);}
+    free(img);
 
-}
 }
 
 
