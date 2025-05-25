@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>  // pour FILE
 #include <stddef.h> // pour size_t
-
+#include <string.h>
 // Définition du pixel (doit venir avant t_bmp24)
 typedef struct {
     uint8_t red;
@@ -44,6 +44,8 @@ typedef struct {
     int          height;      // hauteur
     int          colorDepth;  // en bits
     t_pixel    **data;        // matrice [height][width]
+    uint8_t  *rawHeader;    // pointeur vers les header.offset octets
+    uint32_t  rawHeaderSize;// vaut header.offset
 } t_bmp24;
 
 // Offsets dans l'en-tête
