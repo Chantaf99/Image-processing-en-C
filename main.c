@@ -1,5 +1,6 @@
 //main.c
 #include <stdio.h>
+#include <stdlib.h>
 #include "bmp8.h"
 #include "kernels.h"
 #include "bmp24.h"
@@ -93,6 +94,23 @@ int main(void){
 
 
 
+    */
+
+    //Egalisation d'histogramme en gris
+    t_bmp8 *img = bmp8_loadImage("image_brightness.bmp");
+    if (!img || img->data == NULL) {
+        printf("Erreur chargement image\n");
+        return 1;
+    }
+
+    unsigned int *hist = bmp8_computeHistogram(img);
+    unsigned int *cdf = bmp8_computeCDF(hist);
+    bmp8_equalize(img, cdf);
+
+    bmp8_saveImage("imagegris_equalized.bmp", img);
+    bmp8_free(img);
+    free(hist);
+    free(cdf);
 
     return 0;
 }

@@ -2,9 +2,10 @@
 #include "bmp8.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h> 
+#include <string.h>
 #include <math.h>
 
+#include <math.h>
 
 t_bmp8 *bmp8_loadImage(const char *filename) {
     FILE *file = fopen(filename, "rb");
@@ -207,7 +208,7 @@ unsigned int * bmp8_computeCDF(unsigned int * hist)
 	}
     //Calcul du CDF
     cdf[0] = hist[0];
-    for (unsigned int i = 0; i < 256; i++) {
+    for (unsigned int i = 1; i < 256; i++) {
         cdf[i] = cdf[i-1] + hist[i];
     }
 
@@ -236,4 +237,16 @@ unsigned int * bmp8_computeCDF(unsigned int * hist)
 
     free(cdf);
     return hist_eq;
+}
+
+void bmp8_equalize(t_bmp8 *img, unsigned int *hist_eq) {
+  //egalisation d'histogramme : chaque pixel est remplacé par sa nouvelle valeur
+
+    if (img == NULL || img->data == NULL || hist_eq == NULL){
+      return;
+      }
+
+    for (unsigned int i = 0; i < img->dataSize; i++) {
+        img->data[i] = (unsigned char)hist_eq[img->data[i]];
+    }
 }
