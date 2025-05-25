@@ -2,10 +2,10 @@
 #define BMP24_H
 
 #include <stdint.h>
-#include <stdio.h>  // pour FILE
-#include <stddef.h> // pour size_t
+#include <stdio.h> 
+#include <stddef.h> 
 #include <string.h>
-// Définition du pixel (doit venir avant t_bmp24)
+// Définition du pixel
 typedef struct {
     uint8_t red;
     uint8_t green;
@@ -85,13 +85,17 @@ void bmp24_writePixelData (t_bmp24 *image, FILE *file);
 // Chargement / sauvegarde
 t_bmp24 *bmp24_loadImage(const char *filename);
 void bmp24_saveImage(t_bmp24 *img, const char *filename);
-
+void bmp24_printInfo(t_bmp24 *img);
+void bmp24_negative(t_bmp24 *img);
 // Autres traitements (stubs)
 void     bmp24_negative    (t_bmp24 *img);
 void     bmp24_grayscale   (t_bmp24 *img);
 void     bmp24_brightness  (t_bmp24 *img, int value);
-t_pixel  bmp24_convolution (t_bmp24 *img, int x, int y, float **kernel, int kernelSize);
-void bmp24_applyFilter(t_bmp24 *img, float **kernel, int kernelSize);
-void apply_and_save_24(const char *srcFilename, const char *outFilename, float **kernel, int kernelSize);
+
+
+//Egalisation d'histogramme en couleur
+void rgb_to_yuv(unsigned char R, unsigned char G, unsigned char B, double *Y, double *U, double *V);
+void yuv_to_rgb(double Y, double U, double V, unsigned char *R, unsigned char *G, unsigned char *B);
+void bmp24_equalizeColor(t_bmp24 *img);
 
 #endif // BMP24_H

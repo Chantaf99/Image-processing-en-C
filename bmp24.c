@@ -198,6 +198,20 @@ void bmp24_saveImage(t_bmp24 *img, const char *filename) {
     fclose(file);
 }
 
+void bmp24_printInfo(t_bmp24 *img) {
+    if (!img) {
+        printf("Aucune image chargée.\n");
+        return;
+    }
+    printf("Image Info (24 bits):\n   ");
+    printf("Width: %d\n   ", img->width);
+    printf("Height: %d\n   ", img->height);
+    printf("Color Depth: %d bits/pixel\n   ", img->colorDepth);
+    // Calcul de la taille brute des pixels (sans header ni palettes)
+    unsigned int dataSize = img->width * img->height * 3;
+    printf("Data Size: %u bytes\n", dataSize);
+}
+
 void bmp24_negative(t_bmp24 *img) {
     for (int y = 0; y < img->height; y++) {
         for (int x = 0; x < img->width; x++) {
@@ -240,83 +254,125 @@ void bmp24_brightness(t_bmp24 *img, int value) {
     }
 }
 
-t_pixel bmp24_convolution(t_bmp24 *img, int x, int y, float **kernel, int kernelSize) {
-    int half = kernelSize / 2;
-    float r = 0.0f, g = 0.0f, b = 0.0f;
-
-    for (int ky = -half; ky <= half; ky++) {
-        for (int kx = -half; kx <= half; kx++) {
-            int ix = x + kx;
-            int iy = y + ky;
-
-            // Ignore les pixels hors limites
-            if (ix < 0 || ix >= img->width || iy < 0 || iy >= img->height)
-                continue;
-
-            float coef = kernel[ky + half][kx + half];
-            t_pixel px = img->data[iy][ix];
-
-            r += px.red   * coef;
-            g += px.green * coef;
-            b += px.blue  * coef;
-        }
-    }
-
-    // Clamping + arrondi
-    if (r < 0.0f) r = 0.0f; else if (r > 255.0f) r = 255.0f;
-    if (g < 0.0f) g = 0.0f; else if (g > 255.0f) g = 255.0f;
-    if (b < 0.0f) b = 0.0f; else if (b > 255.0f) b = 255.0f;
-
-    t_pixel result = {
-        .red   = (uint8_t)(r + 0.5f),
-        .green = (uint8_t)(g + 0.5f),
-        .blue  = (uint8_t)(b + 0.5f)
-    };
-
-    return result;
+// Convertit une couleur (R,G,B) en composantes YUV (luminance + chrominance)
+void rgb_to_yuv(unsigned char R, unsigned char G, unsigned char B, double *Y, double *U, double *V) {
+    *Y = 0.299 * R + 0.587 * G + 0.114 * B;
+    *U = -0.14713 * R - 0.28886 * G + 0.436 * B;
+    *V = 0.615 * R - 0.51499 * G - 0.10001 * B;
 }
 
-void bmp24_applyFilter(t_bmp24 *img, float **kernel, int kernelSize) {
-    int w = img->width;
-    int h = img->height;
+// Convertit une couleur (Y,U,V) en (R,G,B), avec correction de débordement [0,255]
+void yuv_to_rgb(double Y, double U, double V, unsigned char *R, unsigned char *G, unsigned char *B) {
+  // Calcul des canaux RGB à partir de YUV (formules inverses)
+    int r = round(Y + 1.13983 * V);
+    int g = round(Y - 0.39465 * U - 0.58060 * V);
+    int b = round(Y + 2.03211 * U);
 
-    // Allouer un nouveau tableau de pixels
-    t_pixel **newData = malloc(h * sizeof(t_pixel *));
-    for (int y = 0; y < h; y++) {
-        newData[y] = malloc(w * sizeof(t_pixel));
-    }
+   //nécessité de rester dans les bornes 0 et 255
+    if (r < 0) r = 0; if (r > 255) r = 255;
+    if (g < 0) g = 0; if (g > 255) g = 255;
+    if (b < 0) b = 0; if (b > 255) b = 255;
 
-    // Appliquer la convolution à chaque pixel
-    for (int y = 0; y < h; y++) {
-        for (int x = 0; x < w; x++) {
-            newData[y][x] = bmp24_convolution(img, x, y, kernel, kernelSize);
-        }
-    }
-
-    // Libérer l'ancien tableau
-    for (int y = 0; y < h; y++) {
-        free(img->data[y]);
-    }
-    free(img->data);
-
-    // Remplacer par le nouveau
-    img->data = newData;
+    *R = (unsigned char)r;
+    *G = (unsigned char)g;
+    *B = (unsigned char)b;
 }
 
-void apply_and_save_24(const char *srcFilename, const char *outFilename, float **kernel, int kernelSize) {
-    t_bmp24 *img = bmp24_loadImage(srcFilename);
 
-    if (!img) {
-        printf("Erreur : impossible de charger l'image '%s'\n", srcFilename);
+// Améliore le contraste d'une image couleur 24 bits par égalisation de l'histogramme de luminance (Y)
+void bmp24_equalizeColor(t_bmp24 *img) {
+    if (!img || !img->data) {
+        printf("Image invalide\n");
         return;
     }
 
-    bmp24_applyFilter(img, kernel, kernelSize);
-    bmp24_saveImage(img, outFilename);
+    int width = img->width;
+    int height = img->height;
+    int size = width * height;
+    // Allocation des canaux YUV (luminance et chrominance)
+    double *Y = malloc(size * sizeof(double));
+    double *U = malloc(size * sizeof(double));
+    double *V = malloc(size * sizeof(double));
 
-    printf("Image traitee et sauvegardee dans '%s'\n", outFilename);
-    bmp24_free(img);
+    if (!Y || !U || !V) {
+        printf("Erreur d’allocation mémoire YUV\n");
+        free(Y);
+        free(U);
+        free(V);
+        return;
     }
+
+    // Étape 1 : conversion RGB → YUV
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            int idx = i * width + j;
+            t_pixel pixel = img->data[i][j];
+            rgb_to_yuv(pixel.red, pixel.green, pixel.blue, &Y[idx], &U[idx], &V[idx]);
+        }
+    }
+
+    // Étape 2 : histogramme de luminance Y
+    unsigned int hist[256] = {0};
+    for (int i = 0; i < size; i++) {
+        int y = round(Y[i]);
+        if (y < 0) {
+          y = 0;
+        }
+        if (y > 255){
+          y = 255;
+        }
+        hist[y]++;
+    }
+
+    // Étape 3 : Construction de la CDF (fonction de répartition cumulée)
+    unsigned int cdf[256] = {0};
+    cdf[0] = hist[0];
+    for (int i = 1; i < 256; i++) {
+        cdf[i] = cdf[i - 1] + hist[i];
+    }
+
+    //Recherche de la première valeur non nulle
+    unsigned int total = cdf[255];
+    unsigned int cdfmin = 0;
+    for (int i = 0; i < 256; i++) {
+        if (cdf[i] > 0) {
+            cdfmin = cdf[i];
+            break;
+        }
+    }
+
+    // Génère une table de correspondance (valeurs égalisé)
+    unsigned char map[256];
+    for (int i = 0; i < 256; i++) {
+        if (total == cdfmin) {
+            map[i] = i;
+        } else {
+            map[i] = round(((double)(cdf[i] - cdfmin) / (total - cdfmin)) * 255);
+        }
+    }
+
+    // Étape 4 : égalisation de Y : remplace chaque valeur Y par sa version égalisée
+    for (int i = 0; i < size; i++) {
+        int y = round(Y[i]);
+        if (y < 0) y = 0;
+        if (y > 255) y = 255;
+        Y[i] = map[y];
+    }
+
+    // Étape 5 : reconversion YUV → RGB
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            int idx = i * width + j;
+            unsigned char r, g, b;
+            yuv_to_rgb(Y[idx], U[idx], V[idx], &r, &g, &b);
+            img->data[i][j].red = r;
+            img->data[i][j].green = g;
+            img->data[i][j].blue = b;
+        }
+    }
+
+    free(Y); free(U); free(V);
+}
 
 
 

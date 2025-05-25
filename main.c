@@ -1,95 +1,162 @@
-//main.c
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
 #include "bmp8.h"
-#include "kernels.h"
 #include "bmp24.h"
-int main(void){
+#include "kernels.h"
+#include "filtres_convolution.h"
 
-//  Partie 1 Appel de l'image BMP 8 bits
-    t_bmp8 *img = bmp8_loadImage("barbara_gray (1).bmp");
-    if (!img) {
-        perror("Échec du chargement de l'image\n");
-        return 1;
-    }
+// Chemin fixe où on stocke/tire les BMP
+#define BASE_PATH "C:\\Users\\chara\\Programmes_C\\Image-processing-en-C\\"
 
+// Type courant d'image chargée
+enum ImageType { NONE, GRAY8, COLOR24 };
 
+int main(void) {
+    enum ImageType type = NONE;
+    t_bmp8  *img8  = NULL;
+    t_bmp24 *img24 = NULL;
+    char filename[256];
+    char fullpath[512];
+    int choice;
 
-/*  Partie 1 Traitement d'images BMP 8 bits
-    t_bmp8 *img_negative8 = bmp8_loadImage("barbara_gray (1).bmp");
-    bmp8_negative(img_negative8);
-    bmp8_saveImage("image_negative8.bmp", img_negative8);
-    bmp8_free(img_negative8);
+    while (1) {
+        // ——— Menu Principal ———————————————————————————————
+        printf("\n==== Menu Principal ====\n");
+        printf("1. Ouvrir une image BMP\n");
+        printf("2. Sauvegarder l'image courante\n");
+        printf("3. Appliquer un filtre\n");
+        printf("4. Afficher les infos de l'image\n");
+        printf("5. Quitter\n");
+        printf(">>> Votre choix : ");
+        if (scanf("%d", &choice)!=1) {
+            // Si pas un entier, on nettoie et on recommence
+            int c; while((c=getchar())!='\n' && c!=EOF);
+            continue;
+        }
+        // Vider le '\n' restant
+        int c; while((c=getchar())!='\n' && c!=EOF);
 
+        switch (choice) {
+          case 1:
+            // — Ouvrir une image
+            printf("Nom du fichier BMP (ex: foo.bmp) : ");
+            if (!fgets(filename, sizeof(filename), stdin)) break;
+            filename[strcspn(filename,"\n")] = '\0';
 
-    t_bmp8 *img_brightness8 = bmp8_loadImage("barbara_gray (1).bmp");
-    bmp8_brightness(img_brightness8, 100);
-    bmp8_saveImage("image_brightness8.bmp", img_brightness8);
-    bmp8_free(img_brightness8);
+            // Construire chemin complet
+            snprintf(fullpath, sizeof(fullpath), "%s%s", BASE_PATH, filename);
 
-    t_bmp8 *img_threshold8 = bmp8_loadImage("barbara_gray (1).bmp");
-    bmp8_threshold(img_threshold8, 50);
-    bmp8_saveImage("image_threshold8.bmp", img_threshold8);
-    bmp8_free(img_threshold8);
-    bmp8_free(img);
-*/
-    
-/* Partie 1 Traitement de filtres
-    const char *src = "barbara_gray (1).bmp";
-    apply_and_save(src, "image_sharpen8.bmp", sharpen, 3);
-    apply_and_save(src, "image_box_blur8.bmp", box_blur, 3);
-    apply_and_save(src, "image_gauss8.bmp", gaussian_blur, 3);
-    apply_and_save(src, "image_outline8.bmp", outline, 3);
-    apply_and_save(src, "image_emboss8.bmp", emboss, 3);
+            // Libérer l’ancienne image
+            if (img8)  { bmp8_free(img8);   img8  = NULL; }
+            if (img24) { bmp24_free(img24); img24 = NULL; }
 
-    bmp8_free(img);
+            // Tenter 8 bits
+            img8 = bmp8_loadImage(fullpath);
+            if (img8) {
+                type = GRAY8;
+                printf("-> Image 8-bits chargee : %ux%u\n",
+                       img8->width, img8->height);
+            }
+            else {
+                // Sinon 24 bits
+                img24 = bmp24_loadImage(fullpath);
+                if (img24) {
+                    type = COLOR24;
+                    printf("-> Image 24-bits chargee : %dx%d\n",
+                           img24->width, img24->height);
+                }
+                else {
+                    type = NONE;
+                    printf("-> Echec du chargement de '%s'\n", fullpath);
+                }
+            }
+            break;
 
-    printf("Programme termine avec succes.\n");
-*/ 
+          case 2:
+            // — Sauvegarder l’image courante
+            if (type==NONE) {
+                printf("Aucune image chargee.\n");
+                break;
+            }
+            printf("Nom de sortie (ex: out.bmp) : ");
+            if (!fgets(filename, sizeof(filename), stdin)) break;
+            filename[strcspn(filename,"\n")] = '\0';
+            snprintf(fullpath, sizeof(fullpath), "%s%s", BASE_PATH, filename);
 
-    /* Partie 2 Traitement d'images BMP 24 bits
+            if (type==GRAY8) {
+                bmp8_saveImage(fullpath, img8);
+            } else {
+                bmp24_saveImage(img24, fullpath);
+            }
+            break;
 
-    t_bmp24 *img24 = bmp24_loadImage("flowers_color.bmp");
-    if (!img24) {
-        perror("Échec du chargement de l'image BMP 24 bits");
-        return 1;
-    }
+          case 3:
+            // — Appliquer un filtre
+            if (type==NONE) {
+                printf("Aucune image chargee.\n");
+                break;
+            }
+            {
+              int f;
+              printf("Choisissez un filtre :\n");
+              printf(" 1.Negatif  2.Luminosite(+50)  3.Seuillage(128)\n");
+              printf(" 4.Flou    5.Gaussien    6.Contours\n");
+              printf(" 7.Relief  8.Nettete    9.Annuler\n");
+              printf(">>> "); scanf("%d",&f);
+              while((c=getchar())!=EOF&&c!='\n');
 
-    // Traitement d'image BMP 24 bits
-    t_bmp24 *img_negative24 = bmp24_loadImage("flowers_color.bmp");
-    if (!img_negative24) {
-        perror("Échec du chargement de l'image BMP 24 bits pour le négatif");
-        return 1;
-    }
-    bmp24_negative(img_negative24);
-    bmp24_saveImage(img_negative24, "flowers_color_negative24.bmp");
-    bmp24_free(img_negative24);
+              if (f==9) break;
 
+              // Filtre 8-bits ou 24-bits
+              if (type==GRAY8) {
+                switch(f) {
+                  case 1: bmp8_negative(img8);                      break;
+                  case 2: bmp8_brightness(img8, 50);                break;
+                  case 3: bmp8_threshold(img8, 128);                break;
+                  case 4: bmp8_applyFilter(img8, box_blur, 3);      break;
+                  case 5: bmp8_applyFilter(img8, gaussian_blur, 3); break;
+                  case 6: bmp8_applyFilter(img8, outline, 3);       break;
+                  case 7: bmp8_applyFilter(img8, emboss, 3);        break;
+                  case 8: bmp8_applyFilter(img8, sharpen, 3);       break;
+                  default: printf("Filtre invalide.\n"); continue;
+                }
+              } else {
+                switch(f) {
+                  case 1: bmp24_negative(img24);                     break;
+                  case 2: bmp24_brightness(img24, 50);              break;
+                  case 3: bmp24_grayscale(img24);                    break;
+                  case 4: bmp24_applyFilter(img24, box_blur, 3);     break;
+                  case 5: bmp24_applyFilter(img24, gaussian_blur,3); break;
+                  case 6: bmp24_applyFilter(img24, outline, 3);      break;
+                  case 7: bmp24_applyFilter(img24, emboss, 3);       break;
+                  case 8: bmp24_applyFilter(img24, sharpen, 3);      break;
+                  default: printf("Filtre invalide.\n"); continue;
+                }
+              }
+              printf("-> Filtre applique.\n");
+            }
+            break;
 
-    t_bmp24 *img_grayscale24 = bmp24_loadImage("flowers_color.bmp");
-    bmp24_grayscale(img_grayscale24);
-    bmp24_saveImage(img_grayscale24, "flowers_color_grayscale24.bmp"); 
-    bmp24_free(img_grayscale24);
-   
-    t_bmp24 *img_brightness24 = bmp24_loadImage("flowers_color.bmp");
-    bmp24_brightness(img_brightness24, 50);
-    bmp24_saveImage(img_brightness24, "flowers_color_brightness24.bmp");
-    bmp24_free(img_brightness24);
-    
-    bmp24_free(img24);
+          case 4:
+            // — Afficher les infos
+            if (type==GRAY8)  bmp8_printInfo(img8);
+            else if (type==COLOR24) bmp24_printInfo(img24);
+            else printf("Aucune image chargee.\n");
+            break;
 
-    printf("Traitement d'images BMP 24 bits termine avec succes.\n");
-*/
-    //Traitement de filtres sur BMP 24 bits
+          case 5:
+            // — Quitter
+            if (img8 ) bmp8_free(img8);
+            if (img24) bmp24_free(img24);
+            printf("Au revoir !\n");
+            return 0;
 
-    const char *src24 = "flowers_color.bmp";
-    apply_and_save_24(src24, "flowers_color_sharpen24.bmp", sharpen, 3);
-    apply_and_save_24(src24, "flowers_color_box_blur24.bmp", box_blur, 3);
-    apply_and_save_24(src24, "flowers_color_gaussian24.bmp", gaussian_blur, 3);
-    apply_and_save_24(src24, "flowers_color_outline24.bmp", outline, 3);
-    apply_and_save_24(src24, "flowers_color_emboss24.bmp", emboss, 3);
-
-    
+          default:
+            printf("Choix invalide.\n");
+        } // switch
+    } // while
 
     //Egalisation d'histogramme en gris
     t_bmp8 *img = bmp8_loadImage("image_brightness.bmp");
@@ -106,6 +173,17 @@ int main(void){
     bmp8_free(img);
     free(hist);
     free(cdf);
+    //Egalisation d'histogramme en couleur
+    t_bmp24 *img = bmp24_loadImage("flowers_color.bmp");
+    if (!img) {
+        printf("Erreur chargement image\n");
+        return 1;
+    }
 
+    bmp24_equalizeColor(img);
+
+    bmp24_saveImage(img, "flowers_equalized.bmp");
+    bmp24_free(img);
+    printf("Image Flowers equalized bien chargee");
     return 0;
 }
