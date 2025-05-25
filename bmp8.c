@@ -163,10 +163,9 @@ void apply_and_save(const char *srcFilename, const char *outFilename, float **ke
     bmp8_applyFilter(img, kernel, kernelSize);
 
     bmp8_saveImage(outFilename, img);
-    
-    printf("Image sauvegardee dans %s\n", outFilename);}
-    free(img);
+free(img);
 
+}
 }
 
 
