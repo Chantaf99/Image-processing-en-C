@@ -1,27 +1,29 @@
-
 #include "bmp8.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 
-#include <math.h>
-
+// Charge une image BMP 8 bits (niveaux de gris)
 t_bmp8 *bmp8_loadImage(const char *filename) {
     FILE *file = fopen(filename, "rb");
     if (!file) {
         perror("Erreur d'ouverture du fichier");
         return NULL;
     }
+
+    // Allocation de la structure t_bmp8
     t_bmp8 *img = (t_bmp8 *)malloc(sizeof(t_bmp8));
     if (!img) {
         perror("Erreur d'allocation de memoire");
         fclose(file);
         return NULL;
     }
-    // On lit les 54 octets de l'en-tete
+
+    // Lecture de l'en-tête BMP (54 octets)
     fread(img->header, sizeof(unsigned char), 54, file);
-    // On extrait les informations à partir de l'en-tete bmp
+
+    // Extraction des métadonnées de l'image
     img->width = *(unsigned int *)&img->header[18];
     img->height = *(unsigned int *)&img->header[22];
     img->colorDepth = *(unsigned short *)&img->header[28];
@@ -29,14 +31,19 @@ t_bmp8 *bmp8_loadImage(const char *filename) {
     if(img->dataSize == 0) {
         img->dataSize = img->width * img->height;
     }
-    // Allocation dynamique de la mémoire pour stocker les données des pixels
+
+    // Vérifie que l'image est bien en niveaux de gris (8 bits)
     if (img->colorDepth != 8) {
         perror("Erreur: l'image n'est pas en niveaux de gris (8 bits)\n");
         free(img);
         fclose(file);
         return NULL;
     }
+
+    // Lecture de la table des couleurs (1024 octets pour 256 couleurs)
     fread(img->colorTable, sizeof(unsigned char), 1024, file);
+
+    // Allocation des données d'image (pixels)
     img->data = malloc(img->dataSize);
     if (!img->data) {
         perror("Erreur. Echec de l'allocation des donnees.\n");
@@ -45,15 +52,14 @@ t_bmp8 *bmp8_loadImage(const char *filename) {
         return NULL;
     }
 
+    // Lecture des pixels
     fread(img->data, sizeof(unsigned char), img->dataSize, file);
-    //On ferme le fichier, et on retourne l'adresse de l'image
     fclose(file);
     return img;
-
 }
 
+// Sauvegarde une image BMP 8 bits sur le disque
 void bmp8_saveImage(const char *filename, t_bmp8 *img) {
-    //Ouvre le fichier en mode ecriture binaire et vérifie que l'ouverture a ete reussi
     FILE *file = fopen(filename, "wb");
     if (!file) {
         perror("Erreur. Il est impossible d'ouvrir le fichier \n");
@@ -64,20 +70,19 @@ void bmp8_saveImage(const char *filename, t_bmp8 *img) {
     fwrite(img->colorTable, sizeof(unsigned char), 1024, file);
     fwrite(img->data, sizeof(unsigned char), img->dataSize, file);
 
-    fclose(file); //ferme le fichier, afin de finaliser l'écriture
+    fclose(file);
     printf("L'image a ete sauvegardee avec succes dans %s\n", filename);
-    
 }
 
+// Libère la mémoire allouée à une image BMP 8 bits
 void bmp8_free(t_bmp8 *img) {
-    //On vérifie que img n'est pas un pointeur NULL
     if (img) {
         if (img->data) free(img->data);
         free(img);
     }
-
 }
 
+// Affiche les informations d'une image (dimensions, profondeur, taille)
 void bmp8_printInfo(t_bmp8 *img) {
     printf("Image Info:\n   ");
     printf("Width: %u\n   ", img->width);
@@ -86,13 +91,14 @@ void bmp8_printInfo(t_bmp8 *img) {
     printf("Data Size: %u\n   ", img->dataSize);
 }
 
-
+// Applique un filtre négatif à l'image (inversion des pixels)
 void bmp8_negative(t_bmp8 *img) {
     for (unsigned int i = 0; i < img->dataSize; i++) {
         img->data[i] = 255 - img->data[i];
     }
 }
 
+// Modifie la luminosité de l'image (+/- value)
 void bmp8_brightness(t_bmp8 *img, int value) {
     for (unsigned int i = 0; i < img->dataSize; i++) {
         int newValue = img->data[i] + value;
@@ -102,74 +108,11 @@ void bmp8_brightness(t_bmp8 *img, int value) {
     }
 }
 
+// Applique un seuillage (pixels < seuil deviennent noirs, les autres blancs)
 void bmp8_threshold(t_bmp8 *img, int threshold) {
     for (unsigned int i = 0; i < img->dataSize; i++) {
-        if (img->data[i] < threshold) {
-            img->data[i] = 0;
-        } else {
-            img->data[i] = 255;
-        }
+        img->data[i] = (img->data[i] < threshold) ? 0 : 255;
     }
-}
-
-void bmp8_applyFilter(t_bmp8 *img, float **kernel, int kernelSize) {
-    int w = img->width;
-    int h = img->height;
-    int half = kernelSize / 2;
-
-    // 1) Allouer un nouveau buffer pour les pixels
-    unsigned char *newData = malloc(img->dataSize);
-    if (!newData) {
-        perror("Erreur d'allocation de mémoire pour le filtre");
-        return;
-    }
-
-    // 2) Copier les bords tels quels (on n'y applique pas le filtre)
-    memcpy(newData, img->data, img->dataSize);
-
-    // 3) Parcourir uniquement l'intérieur de l'image
-    for (int y = half; y < h - half; y++) {
-        for (int x = half; x < w - half; x++) {
-            float acc = 0.0f;
-
-            // 4) Convoluer le noyau centré sur (x,y)
-            for (int ky = -half; ky <= half; ky++) {
-                for (int kx = -half; kx <= half; kx++) {
-                    int ix = x + kx;
-                    int iy = y + ky;
-                    float coef = kernel[ky + half][kx + half];
-                    acc += img->data[iy * w + ix] * coef;
-                }
-            }
-
-            // 5) Clamper la somme entre 0 et 255
-            if      (acc < 0.0f)   acc = 0.0f;
-            else if (acc > 255.0f) acc = 255.0f;
-
-            // 6) Stocker le résultat
-            newData[y * w + x] = (unsigned char)(acc + 0.5f);
-        }
-    }
-
-    // 7) Remplacer l'ancien buffer par le nouveau
-    free(img->data);
-    img->data = newData;
-}
-void apply_and_save(const char *srcFilename, const char *outFilename, float **kernel, int kernelSize){
-    
-    t_bmp8 *img = bmp8_loadImage(srcFilename);
-    
-    if (!img) {
-        printf("Erreur : impossible de charger '%s'\n", srcFilename);
-        return;
-    }
-    bmp8_applyFilter(img, kernel, kernelSize);
-    bmp8_saveImage(outFilename, img);
-    printf("Image traitée et sauvegardée dans '%s'\n", outFilename);
-    
-    free(img);
-
-
 }
 
 //Calcul l'histogramme d'une image de 8 bits en niveaux de gris
@@ -184,12 +127,12 @@ unsigned int * bmp8_computeHistogram(t_bmp8 * img) {
   if (hist == NULL){
     printf("Erreur. Allocation mémoire histogramme.\n");
     return NULL;
-	}
+    }
 
   //Remplissage de l'histogramme : on compte les pixels par niveaux de gris
   for (unsigned int i = 0; i < img->dataSize; i++) {
     hist[img->data[i]]++;
-	}
+    }
 
   return hist;
 }
@@ -198,19 +141,19 @@ unsigned int * bmp8_computeHistogram(t_bmp8 * img) {
 unsigned int * bmp8_computeCDF(unsigned int * hist)
 {
 
-	if(hist==NULL){return NULL;}
-	unsigned int *cdf = (unsigned int *)calloc(256, sizeof(unsigned int));
-	if (cdf == NULL){
-  		printf("Erreur d'allocation de cdf");
-  		return NULL;
-	}
+    if(hist==NULL){return NULL;}
+    unsigned int *cdf = (unsigned int *)calloc(256, sizeof(unsigned int));
+    if (cdf == NULL){
+       printf("Erreur d'allocation de cdf");
+       return NULL;
+    }
     //Construction de la  CDF
     cdf[0] = hist[0];
     for (unsigned int i = 1; i < 256; i++) {
         cdf[i] = cdf[i-1] + hist[i];
     }
 
-	//Calcul de la premiere valeur non nulle de la CDF (cdfmin)
+    //Calcul de la premiere valeur non nulle de la CDF (cdfmin)
     unsigned int cdfmin = 0;
     for (int i = 0; i < 256; i++) {
         if (cdf[i] != 0) {
@@ -249,3 +192,5 @@ void bmp8_equalize(t_bmp8 *img, unsigned int *hist_eq) {
         img->data[i] = (unsigned char)hist_eq[img->data[i]];
     }
 }
+
+
