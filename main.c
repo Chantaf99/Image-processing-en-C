@@ -28,7 +28,8 @@ int main(void) {
         printf("2. Sauvegarder l'image courante\n");
         printf("3. Appliquer un filtre\n");
         printf("4. Afficher les infos de l'image\n");
-        printf("5. Quitter\n");
+        printf("5. Egaliser l'histogramme\n");
+        printf("6. Quitter\n");
         printf(">>> Votre choix : ");
         if (scanf("%d", &choice)!=1) {
             // Si pas un entier, on nettoie et on recommence
@@ -146,44 +147,40 @@ int main(void) {
             else printf("Aucune image chargee.\n");
             break;
 
-          case 5:
-            // — Quitter
-            if (img8 ) bmp8_free(img8);
+            case 5:
+                // — Égalisation d'histogramme
+                    if (type==NONE) {
+                        printf("Aucune image chargee.\n");
+                        break;
+                    }
+            if (type==GRAY8) {
+                printf("-> Egalisation de l'image 8-bits...\n");
+                unsigned int *hist = bmp8_computeHistogram(img8);
+                unsigned int *cdf = bmp8_computeCDF(hist);
+                bmp8_equalize(img8, cdf);
+                free(hist);
+                free(cdf);
+                printf("-> Egalisation terminee.\n");
+            } else {
+                printf("-> Egalisation de l'image 24-bits...\n");
+                bmp24_equalizeColor(img24);
+                printf("-> Egalisation terminee.\n");
+            }
+            break;
+
+            case 6:
+                // — Quitter
+                    if (img8 ) bmp8_free(img8);
             if (img24) bmp24_free(img24);
             printf("Au revoir !\n");
             return 0;
 
-          default:
-            printf("Choix invalide.\n");
+            default:
+                printf("Choix invalide.\n");
         } // switch
     } // while
 
-    //Egalisation d'histogramme en gris
-    t_bmp8 *imgP38 = bmp8_loadImage("image_brightness.bmp");
-    if (!imgP38 || imgP38->data == NULL) {
-        printf("Erreur chargement image\n");
-        return 1;
-    }
-
-    unsigned int *hist = bmp8_computeHistogram(imgP38);
-    unsigned int *cdf = bmp8_computeCDF(hist);
-    bmp8_equalize(imgP38, cdf);
-
-    bmp8_saveImage("imagegris_equalized.bmp", imgP38);
-    bmp8_free(imgP38);
-    free(hist);
-    free(cdf);
-    //Egalisation d'histogramme en couleur
-    t_bmp24 *imgP324 = bmp24_loadImage("flowers_color.bmp");
-    if (!imgP324) {
-        printf("Erreur chargement image\n");
-        return 1;
-    }
-
-    bmp24_equalizeColor(imgP324);
-
-    bmp24_saveImage(imgP324, "flowers_equalized.bmp");
-    bmp24_free(imgP324);
-    printf("Image Flowers equalized bien chargee");
     return 0;
 }
+
+
